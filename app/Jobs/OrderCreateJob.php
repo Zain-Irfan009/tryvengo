@@ -1,5 +1,7 @@
 <?php namespace App\Jobs;
 
+use App\Http\Controllers\OrderController;
+use App\Models\User;
 use stdClass;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
@@ -49,6 +51,10 @@ class OrderCreateJob implements ShouldQueue
     {
         // Convert domain
         $this->shopDomain = ShopDomain::fromNative($this->shopDomain);
+        $shop = User::where('name', $this->shopDomain->toNative())->first();
+        $order = json_decode(json_encode($this->data), false);
+        $orderController = new OrderController();
+        $orderController->singleOrder($order, $shop);
 
         // Do what you wish with the data
         // Access domain name as $this->shopDomain->toNative()

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('shipping_name')->nullable();
             $table->longText('address1')->nullable();
             $table->longText('address2')->nullable();
+            $table->longText('tags')->nullable();
             $table->string('city')->nullable();
             $table->string('state')->nullable();
             $table->string('zip')->nullable();

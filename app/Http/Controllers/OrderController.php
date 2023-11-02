@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lineitem;
 use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -12,8 +13,8 @@ class OrderController extends Controller
 {
 
     public function allOrders(){
-dd(2);
-        $orders=Order::all();
+
+        $orders=Order::paginate(30);
         return view('orders.index',compact('orders'));
     }
 
@@ -25,7 +26,7 @@ dd(2);
             'limit' => 250,
             'page_info' => $next
         ]);
-dd($orders);
+
         if ($orders['errors'] == false) {
             if (count($orders['body']->container['orders']) > 0) {
                 foreach ($orders['body']->container['orders'] as $order) {
@@ -51,10 +52,10 @@ dd($orders);
             if ($newOrder == null) {
                 $newOrder = new Order();
             }
-            $newOrder->shopify_order_id = $order->id;
+            $newOrder->shopify_id = $order->id;
             $newOrder->email = $order->email;
             $newOrder->order_number = $order->name;
-            $newOrder->order_created_at=$order->created_at;
+
             if (isset($order->shipping_address)) {
                 $newOrder->shipping_name = $order->shipping_address->name;
                 $newOrder->address1 = $order->shipping_address->address1;
@@ -118,4 +119,138 @@ dd($orders);
         }
     }
 
+
+    public function SendOrderDelivery($id)
+    {
+        $shop = Auth::user();
+        $order = Order::find($id);
+        $setting=Setting::first();
+        if($order){
+
+            $url = 'https://tryvengo.com/api/place-ecomerce-order';
+            $pickupEstimateTime = now()->addHours(4);
+//            dd($pickupEstimateTime->format('d/m/Y h:i A'));
+            $data = [
+                'email' =>$setting->email,
+                'password' =>$setting->password,
+                'pick_up_address_id' => 37,
+                'item_type' => 'ds',
+                'item_price' => $order->total_price,
+                'payment_mode' => 2,
+                'pickup_estimate_time_type' => 0,
+                'pickup_estimate_time' => $pickupEstimateTime->format('d/m/Y h:i A'),
+                'recipient_name' => $order->shipping_name,
+                'recipient_mobile' => $order->phone,
+                'address_area' => 'Bayan',
+                'address_block_number' => $order->address2,
+                'address_street' => $order->address1,
+            ];
+
+            // Build the cURL request
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false),
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => http_build_query($data), // Convert data to a query string
+                CURLOPT_HTTPHEADER => array(
+                    'email: ' . $setting->email,
+                    'password: ' . $setting->password,
+                    'Content-Type: application/x-www-form-urlencoded',
+                ),
+            ));
+
+            // Execute the cURL request
+            $response = curl_exec($curl);
+
+            // Close the cURL session
+            curl_close($curl);
+
+            // Decode the JSON response
+            $responseData = json_decode($response, true);
+
+            if ($responseData['status']==1) {
+                $deliveryId = $responseData['delivery_id'];
+                $invoiceId = $responseData['invoice_id'];
+
+                $order->delivery_id=$deliveryId;
+                $order->invoice_id=$invoiceId;
+                $order->status=1;
+                $order->tryvengo_status='Pending';
+                $order->save();
+                return Redirect::tokenRedirect('home', ['notice' => 'Order Pushed to Tryvengo Successfully']);
+                // Now, $deliveryId and $invoiceId contain the respective values
+            }
+
+        }
+
+    }
+
+
+    public function OrdersFilter(Request $request){
+
+        $shop=Auth::user();
+        $orders=Order::query();
+        $orders_count=Order::where('shop_id',$shop->id)->count();
+        if($request->orders_filter!=null) {
+            $orders = $orders->where('order_number', 'like', '%' . $request->orders_filter . '%')->orWhere('shipping_name', 'like', '%' . $request->orders_filter . '%');
+        }
+//        $orders=$orders->where('shop_id',$shop->id)->orderBy('id', 'DESC')->paginate(20);
+        $orders=$orders->where('shop_id',$shop->id)->orderBy('id', 'DESC')->paginate(30);
+        return view('orders.index',compact('orders','request','shop','orders_count'));
+    }
+
+
+
+    public function TrackOrder(){
+        $setting=Setting::first();
+        $url = 'https://tryvengo.com/api/track-order';
+        $data = [
+            'email' =>'orders@mubkhar.com',
+            'password' => 'Mubkv9Qh@1',
+           'invoice_id'=>'14874213'
+        ];
+
+        // Build the cURL request
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false),
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => http_build_query($data), // Convert data to a query string
+            CURLOPT_HTTPHEADER => array(
+                'email: ' . $setting->email,
+                'password: ' . $setting->password,
+                'Content-Type: application/x-www-form-urlencoded',
+            ),
+        ));
+
+        // Execute the cURL request
+        $response = curl_exec($curl);
+
+        // Close the cURL session
+        curl_close($curl);
+
+        // Decode the JSON response
+        $responseData = json_decode($response, true);
+        dd($responseData);
+        if($responseData['status']==1){
+
+//           $order->tryvengo_status=$responseData['order_data']['order_status'];
+//        $order->save();
+        }
+
+    }
 }
