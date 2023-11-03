@@ -86,11 +86,28 @@
             <div class="col-md-9">
 
                 <div class="form-group">
-                    <form action="{{route('orders.filter')}}" method="post">
+                    <form action="{{route('orders.filter')}}" method="Post">
                         @sessionToken
                         <div class="input-group">
 
-                            <input placeholder="Enter Order Name,Customer Name" type="text" @if (isset($request)) value="{{$request->orders_filter}}" @endif name="orders_filter" id="question_email" autocomplete="off" class="form-control">
+                            <select class="form-control " name="tryvengo_status">
+                                <option value="">Select Tryvengo Status</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Pending') selected @endif value="Pending">Pending</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Delivered') selected @endif value="Delivered">Delivered</option>
+
+                            </select>
+
+
+
+                            <select class="form-control " name="order_status">
+                                <option value="">Select Order Status</option>
+                                <option @if(isset($request) && $request->input('order_status')==0) selected @endif value="0">Not Pushed</option>
+                                <option @if(isset($request) && $request->input('order_status')==1) selected @endif value="1">Pushed</option>
+                            </select>
+
+                            <input placeholder="Enter Order Number,Customer Name" type="text" @if (isset($request)) value="{{$request->orders_filter}}" @endif name="orders_filter" id="question_email" autocomplete="off" class="form-control">
+
+                            <input type="date" value="{{ isset($request) ? $request->date_filter : '' }}" name="date_filter" id="question_email" autocomplete="off" class="form-control">
                             @if(isset($request))
                                 <a href="{{URL::tokenRoute('home')}}" type="button" class="btn btn-secondary clear_filter_data mr-1 pl-4 pr-4">Clear</a>
                             @endif
