@@ -180,7 +180,7 @@
                                             </td>
                                             <td>
                                             @if($order->status==0)
-                                                <a href="{{URL::tokenRoute('send.order.delivery',$order->id)}}" class="btn btn-primary view">Pushed to Tryvengo</a>
+                                                <a href="{{URL::tokenRoute('send.order.delivery',$order->id)}}" class="btn btn-primary view">Push to Tryvengo</a>
                                             @endif
                                             </td>
 

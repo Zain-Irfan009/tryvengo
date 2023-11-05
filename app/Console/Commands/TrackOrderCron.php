@@ -32,6 +32,7 @@ class TrackOrderCron extends Command
 
         $setting=Setting::first();
         $orders=Order::where('tryvengo_status','!=','Delivered')->get();
+
         $url = 'https://tryvengo.com/api/track-order';
         foreach ($orders as $order){
 
@@ -71,7 +72,6 @@ class TrackOrderCron extends Command
             // Decode the JSON response
             $responseData = json_decode($response, true);
             if($responseData['status']==1){
-
                 $order->tryvengo_status=$responseData['order_data']['order_status'];
                 $order->save();
             }
