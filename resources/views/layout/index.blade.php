@@ -35,6 +35,7 @@
                         </div>
                         {{--            <a class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="close"></a>--}}
                     </div>
+
                     @yield('content')
 
                 </div>
@@ -47,16 +48,17 @@
 </div>
 
 </div>
+
     <footer class="footer footer-transparent d-print-none">
         <div class="container-xl">
             <div class="row text-center align-items-center ">
             <div class="col-4"></div>
                 <div class="col-6 col-lg-auto mt-3 mt-lg-0">
                     <ul class="list-inline list-inline-dots mb-0">
-                        <li class="list-inline-item">
-                          Contact Us at
-                            <a href="" class="link-secondary">info@haligone.com or 902-635-4109</a>
-                        </li>
+{{--                        <li class="list-inline-item">--}}
+{{--                          Contact Us at--}}
+{{--                            <a href="" class="link-secondary">info@haligone.com or 902-635-4109</a>--}}
+{{--                        </li>--}}
 
                     </ul>
                 </div>
@@ -133,6 +135,7 @@
 {{--    @include('shopify-app::partials.flash_messages')--}}
 {{--@endif--}}
 
+
 @if(\Osiset\ShopifyApp\Util::getShopifyConfig('appbridge_enabled'))
 
     <script
@@ -161,7 +164,7 @@
         var utils = window['app-bridge-utils'];
         var createApp = AppBridge.default;
         var app = createApp({
-            apiKey: "{{ \Osiset\ShopifyApp\Util::getShopifyConfig('api_key', $shopDomain ?? Auth::user()->name ) }}",
+            apiKey: "{{ \Osiset\ShopifyApp\Util::getShopifyConfig('api_key', $shopDomain ?? env('SHOP_NAME') ) }}",
             shopOrigin: "{{ $shopOrigin}}",
             // shopOrigin: "admin.shopify.com",
             {{--host: "{{ \Request::get('host') }}",--}}

@@ -14,7 +14,7 @@ class OrderController extends Controller
 
     public function allOrders(){
 
-        $orders=Order::orderBy('id','desc')->paginate(30);
+        $orders=Order::orderBy('order_number','desc')->paginate(30);
         return view('orders.index',compact('orders'));
     }
 
@@ -191,7 +191,7 @@ class OrderController extends Controller
     {
 
         if($order->financial_status!='refunded' && $order->cancelled_at==null  ) {
-
+            if ($order->cart_token) {
                 $newOrder = Order::where('shopify_id', $order->id)->where('shop_id', $shop->id)->first();
                 if ($newOrder == null) {
                     $newOrder = new Order();
@@ -262,7 +262,7 @@ class OrderController extends Controller
                 }
 
 
-
+            }
         }
     }
 
