@@ -24,6 +24,9 @@ class SettingController extends Controller
         $settings->auto_push_orders=isset($request->auto_push_orders)?$request->auto_push_orders:0;
         $settings->email=$request->email;
         $settings->password=$request->password;
+        $settings->email2=$request->email2;
+        $settings->password2=$request->password2;
+        $settings->switch_account=isset($request->switch_account)?$request->switch_account:0;
         $settings->save();
         return Redirect::tokenRedirect('settings', ['notice' => 'Settings Save Successfully']);
     }

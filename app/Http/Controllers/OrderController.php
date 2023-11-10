@@ -116,71 +116,221 @@ class OrderController extends Controller
                     $new_line->shopify_order_id = $order->id;
                     $new_line->save();
                 }
-            }
-
-            $setting=Setting::first();
-            if($setting->auto_push_orders==1){
-                $url = 'https://tryvengo.com/api/place-ecomerce-order';
-                $pickupEstimateTime = now()->addHours(4);
+                $setting=Setting::first();
+                if($setting->auto_push_orders==1){
+                    $url = 'https://tryvengo.com/api/place-ecomerce-order';
+                    $pickupEstimateTime = now()->addHours(4);
 //            dd($pickupEstimateTime->format('d/m/Y h:i A'));
-                $data = [
-                    'email' =>$setting->email,
-                    'password' =>$setting->password,
-                    'pick_up_address_id' => 37,
-                    'item_type' => 'ds',
-                    'item_price' => $newOrder->total_price,
-                    'payment_mode' => 2,
-                    'pickup_estimate_time_type' => 0,
-                    'pickup_estimate_time' => $pickupEstimateTime->format('d/m/Y h:i A'),
-                    'recipient_name' => $newOrder->shipping_name,
-                    'recipient_mobile' => $newOrder->phone,
-                    'address_area' => $newOrder->city,
-                    'address_block_number' => $newOrder->address2,
-                    'address_street' => $newOrder->address1,
-                ];
 
-                // Build the cURL request
-                $curl = curl_init();
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => $url,
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => '',
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 0,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false),
-                    CURLOPT_CUSTOMREQUEST => 'POST',
-                    CURLOPT_POSTFIELDS => http_build_query($data), // Convert data to a query string
-                    CURLOPT_HTTPHEADER => array(
-                        'email: ' . $setting->email,
-                        'password: ' . $setting->password,
-                        'Content-Type: application/x-www-form-urlencoded',
-                    ),
-                ));
+                    if($order->financial_status=='paid'){
+                        $payment_mode=1;
+                    }else{
+                        $payment_mode=2;
+                    }
 
-                // Execute the cURL request
-                $response = curl_exec($curl);
 
-                // Close the cURL session
-                curl_close($curl);
+                    if($setting->switch_account==0){
+                        $email=$setting->email;
+                        $password=$setting->password;
+                    }elseif ($setting->switch_account==1){
+                        $email=$setting->email2;
+                        $password=$setting->password2;
+                    }
+                    $data = [
+                        'email' =>$email,
+                        'password' =>$password,
+                        'pick_up_address_id' => 37,
+                        'item_type' => 'ds',
+                        'item_price' => $newOrder->total_price,
+                        'payment_mode' => $payment_mode,
+                        'pickup_estimate_time_type' => 0,
+                        'pickup_estimate_time' => $pickupEstimateTime->format('d/m/Y h:i A'),
+                        'recipient_name' => $newOrder->shipping_name,
+                        'recipient_mobile' => $newOrder->phone,
+                        'address_area' => $newOrder->city,
+                        'address_block_number' => $newOrder->address2,
+                        'address_street' => $newOrder->address1,
+                    ];
 
-                // Decode the JSON response
-                $responseData = json_decode($response, true);
+                    // Build the cURL request
+                    $curl = curl_init();
+                    curl_setopt_array($curl, array(
+                        CURLOPT_URL => $url,
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_ENCODING => '',
+                        CURLOPT_MAXREDIRS => 10,
+                        CURLOPT_TIMEOUT => 0,
+                        CURLOPT_FOLLOWLOCATION => true,
+                        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false),
+                        CURLOPT_CUSTOMREQUEST => 'POST',
+                        CURLOPT_POSTFIELDS => http_build_query($data), // Convert data to a query string
+                        CURLOPT_HTTPHEADER => array(
+                            'email: ' . $setting->email,
+                            'password: ' . $setting->password,
+                            'Content-Type: application/x-www-form-urlencoded',
+                        ),
+                    ));
 
-                if ($responseData['status']==1) {
-                    $deliveryId = $responseData['delivery_id'];
-                    $invoiceId = $responseData['invoice_id'];
+                    // Execute the cURL request
+                    $response = curl_exec($curl);
 
-                    $newOrder->delivery_id=$deliveryId;
-                    $newOrder->invoice_id=$invoiceId;
-                    $newOrder->status=1;
-                    $newOrder->tryvengo_status='Pending';
-                    $newOrder->save();
+                    // Close the cURL session
+                    curl_close($curl);
+
+                    // Decode the JSON response
+                    $responseData = json_decode($response, true);
+
+                    if ($responseData['status']==1) {
+                        $deliveryId = $responseData['delivery_id'];
+                        $invoiceId = $responseData['invoice_id'];
+
+                        $newOrder->delivery_id=$deliveryId;
+                        $newOrder->invoice_id=$invoiceId;
+                        $newOrder->status=1;
+                        $newOrder->tryvengo_status='Pending';
+                        $newOrder->save();
+
+                    }
+
 
                 }
 
+            }
 
+
+            elseif (stripos($order->tags,'releasit_cod_form')!== false) {
+
+                $newOrder = Order::where('shopify_id', $order->id)->where('shop_id', $shop->id)->first();
+                if ($newOrder == null) {
+                    $newOrder = new Order();
+                }
+                $newOrder->shopify_id = $order->id;
+                $newOrder->email = $order->email;
+                $newOrder->order_number = $order->name;
+
+                if (isset($order->shipping_address)) {
+                    $newOrder->shipping_name = $order->shipping_address->name;
+                    $newOrder->address1 = $order->shipping_address->address1;
+                    $newOrder->address2 = $order->shipping_address->address2;
+                    $newOrder->phone = $order->shipping_address->phone;
+                    $newOrder->city = $order->shipping_address->city;
+                    $newOrder->zip = $order->shipping_address->zip;
+                    $newOrder->province = $order->shipping_address->province;
+                    $newOrder->country = $order->shipping_address->country;
+                }
+                $newOrder->financial_status = $order->financial_status;
+                $newOrder->fulfillment_status = $order->fulfillment_status;
+                if (isset($order->customer)) {
+                    $newOrder->first_name = $order->customer->first_name;
+                    $newOrder->last_name = $order->customer->last_name;
+                    $newOrder->customer_phone = $order->customer->phone;
+                    $newOrder->customer_email = $order->customer->email;
+                    $newOrder->customer_id = $order->customer->id;
+                }
+                $newOrder->shopify_created_at = date_create($order->created_at)->format('Y-m-d h:i:s');
+                $newOrder->shopify_updated_at = date_create($order->updated_at)->format('Y-m-d h:i:s');
+                $newOrder->tags = $order->tags;
+                $newOrder->note = $order->note;
+                $newOrder->total_price = $order->total_price;
+                $newOrder->currency = $order->currency;
+
+                $newOrder->subtotal_price = $order->subtotal_price;
+                $newOrder->total_weight = $order->total_weight;
+                $newOrder->taxes_included = $order->taxes_included;
+                $newOrder->total_tax = $order->total_tax;
+                $newOrder->currency = $order->currency;
+                $newOrder->total_discounts = $order->total_discounts;
+                $newOrder->shop_id = $shop->id;
+                $newOrder->save();
+                foreach ($order->line_items as $item) {
+                    $new_line = Lineitem::where('shopify_id', $item->id)->where('order_id', $newOrder->id)->where('shop_id', $shop->id)->first();
+                    if ($new_line == null) {
+                        $new_line = new Lineitem();
+                    }
+                    $new_line->shopify_id = $item->id;
+                    $new_line->shopify_product_id = $item->product_id;
+                    $new_line->shopify_variant_id = $item->variant_id;
+                    $new_line->title = $item->title;
+                    $new_line->quantity = $item->quantity;
+                    $new_line->sku = $item->sku;
+                    $new_line->variant_title = $item->variant_title;
+                    $new_line->title = $item->title;
+                    $new_line->vendor = $item->vendor;
+                    $new_line->price = $item->price;
+                    $new_line->requires_shipping = $item->requires_shipping;
+                    $new_line->taxable = $item->taxable;
+                    $new_line->name = $item->name;
+                    $new_line->properties = json_encode($item->properties, true);
+                    $new_line->fulfillable_quantity = $item->fulfillable_quantity;
+                    $new_line->fulfillment_status = $item->fulfillment_status;
+                    $new_line->order_id = $newOrder->id;
+                    $new_line->shop_id = $shop->id;
+                    $new_line->shopify_order_id = $order->id;
+                    $new_line->save();
+                }
+                $setting = Setting::first();
+                if ($setting->auto_push_orders == 1) {
+                    $url = 'https://tryvengo.com/api/place-ecomerce-order';
+                    $pickupEstimateTime = now()->addHours(4);
+//            dd($pickupEstimateTime->format('d/m/Y h:i A'));
+                    $data = [
+                        'email' => $setting->email,
+                        'password' => $setting->password,
+                        'pick_up_address_id' => 37,
+                        'item_type' => 'ds',
+                        'item_price' => $newOrder->total_price,
+                        'payment_mode' => 2,
+                        'pickup_estimate_time_type' => 0,
+                        'pickup_estimate_time' => $pickupEstimateTime->format('d/m/Y h:i A'),
+                        'recipient_name' => $newOrder->shipping_name,
+                        'recipient_mobile' => $newOrder->phone,
+                        'address_area' => $newOrder->city,
+                        'address_block_number' => $newOrder->address2,
+                        'address_street' => $newOrder->address1,
+                    ];
+
+                    // Build the cURL request
+                    $curl = curl_init();
+                    curl_setopt_array($curl, array(
+                        CURLOPT_URL => $url,
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_ENCODING => '',
+                        CURLOPT_MAXREDIRS => 10,
+                        CURLOPT_TIMEOUT => 0,
+                        CURLOPT_FOLLOWLOCATION => true,
+                        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false),
+                        CURLOPT_CUSTOMREQUEST => 'POST',
+                        CURLOPT_POSTFIELDS => http_build_query($data), // Convert data to a query string
+                        CURLOPT_HTTPHEADER => array(
+                            'email: ' . $setting->email,
+                            'password: ' . $setting->password,
+                            'Content-Type: application/x-www-form-urlencoded',
+                        ),
+                    ));
+
+                    // Execute the cURL request
+                    $response = curl_exec($curl);
+
+                    // Close the cURL session
+                    curl_close($curl);
+
+                    // Decode the JSON response
+                    $responseData = json_decode($response, true);
+
+                    if ($responseData['status'] == 1) {
+                        $deliveryId = $responseData['delivery_id'];
+                        $invoiceId = $responseData['invoice_id'];
+
+                        $newOrder->delivery_id = $deliveryId;
+                        $newOrder->invoice_id = $invoiceId;
+                        $newOrder->status = 1;
+                        $newOrder->tryvengo_status = 'Pending';
+                        $newOrder->save();
+
+                    }
+                }
             }
 
 
@@ -282,14 +432,27 @@ try {
     $phone= str_replace(' ', '', $order->phone);
     $phone = substr($phone, -8);
 
+if($order->financial_status=='paid'){
+    $payment_mode=1;
+}else{
+    $payment_mode=2;
+}
+
+if($setting->switch_account==0){
+    $email=$setting->email;
+    $password=$setting->password;
+}elseif ($setting->switch_account==1){
+    $email=$setting->email2;
+    $password=$setting->password2;
+}
 
     $data = [
-        'email' => $setting->email,
-        'password' => $setting->password,
+        'email' => $email,
+        'password' => $password,
         'pick_up_address_id' => 37,
         'item_type' => 'ds',
         'item_price' => $order->total_price,
-        'payment_mode' => 2,
+        'payment_mode' => $payment_mode,
         'pickup_estimate_time_type' => 0,
         'pickup_estimate_time' => $pickupEstimateTime->format('d/m/Y h:i A'),
         'recipient_name' => $order->shipping_name,
@@ -419,6 +582,109 @@ try {
 
 //           $order->tryvengo_status=$responseData['order_data']['order_status'];
 //        $order->save();
+        }
+
+    }
+
+    public function PushSelectedOrders(Request $request){
+        if(isset($request->order_ids)) {
+            $order_ids = explode(',', $request->order_ids);
+            foreach ($order_ids as $order_id){
+
+                $this->SendOrderDeliveryMultiple($order_id);
+            }
+            return Redirect::tokenRedirect('home', ['notice' => 'Order Pushed Successfuly']);
+        }
+    }
+
+    public function SendOrderDeliveryMultiple($id)
+    {
+        $shop = Auth::user();
+        $order = Order::find($id);
+        $setting=Setting::first();
+        if($order){
+
+            try {
+                $url = 'https://tryvengo.com/api/place-ecomerce-order';
+                $pickupEstimateTime = now()->addHours(2);
+
+                $phone= str_replace(' ', '', $order->phone);
+                $phone = substr($phone, -8);
+
+                if($order->financial_status=='paid'){
+                    $payment_mode=1;
+                }else{
+                    $payment_mode=2;
+                }
+                if($setting->switch_account==0){
+                    $email=$setting->email;
+                    $password=$setting->password;
+                }elseif ($setting->switch_account==1){
+                    $email=$setting->email2;
+                    $password=$setting->password2;
+                }
+
+                $data = [
+                    'email' => $email,
+                    'password' => $password,
+                    'pick_up_address_id' => 37,
+                    'item_type' => 'ds',
+                    'item_price' => $order->total_price,
+                    'payment_mode' => $payment_mode,
+                    'pickup_estimate_time_type' => 0,
+                    'pickup_estimate_time' => $pickupEstimateTime->format('d/m/Y h:i A'),
+                    'recipient_name' => $order->shipping_name,
+                    'recipient_mobile' =>$phone,
+                    'address_area' => $order->city,
+                    'address_block_number' => $order->city,
+                    'address_street' => $order->address1,
+                ];
+
+                // Build the cURL request
+                $curl = curl_init();
+                curl_setopt_array($curl, array(
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false),
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS => http_build_query($data), // Convert data to a query string
+                    CURLOPT_HTTPHEADER => array(
+                        'email: ' . $setting->email,
+                        'password: ' . $setting->password,
+                        'Content-Type: application/x-www-form-urlencoded',
+                    ),
+                ));
+
+                // Execute the cURL request
+                $response = curl_exec($curl);
+
+
+                // Close the cURL session
+                curl_close($curl);
+
+                // Decode the JSON response
+                $responseData = json_decode($response, true);
+
+                if ($responseData['status'] == 1) {
+                    $deliveryId = $responseData['delivery_id'];
+                    $invoiceId = $responseData['invoice_id'];
+
+                    $order->delivery_id = $deliveryId;
+                    $order->invoice_id = $invoiceId;
+                    $order->status = 1;
+                    $order->tryvengo_status = 'Pending';
+                    $order->save();
+
+                }
+            }catch (\Exception $exception){
+
+                dd($exception->getMessage());
+            }
         }
 
     }

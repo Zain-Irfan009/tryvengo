@@ -113,6 +113,7 @@
                             @endif
                             <button type="submit" class="btn btn-primary mr-1 pl-4 pr-4">Filter</button>
                             <a href="{{URL::tokenRoute('sync.orders')}}" type="button" class="btn sync-button btn-primary size_button ml-1">Sync Orders</a>
+                            <a href="#"  type="button" style="display: none;float: right" class="btn export_button btn-primary size_button mx-2 ">Push Selected</a>
                         </div>
                     </form>
                 </div>
@@ -139,7 +140,7 @@
                                     class="table table-vcenter card-table">
                                     <thead>
                                     <tr>
-
+                                        <th><input class="form-check-input" id="checkAll" value=""  type="checkbox"></th>
                                         <th>Order Num#</th>
                                         <th>Date</th>
                                         <th>Customer</th>
@@ -156,6 +157,7 @@
                                                 $tags=explode(',',$order->tags);
                                         @endphp
                                         <tr  class="product_detail" data-row_id="#varinat_details_{{$order->id}}">
+                                            <td><input class="form-check-input single_check" value="{{$order->id}}"  type="checkbox"></td>
                                             <td> {{$order->order_number}}</td>
                                             <td>{{$order->created_at->format('F d')}}</td>
                                             <td class="text-muted" >
@@ -207,19 +209,25 @@
             </div>
         </div>
     </div>
+
+    <form id="export_form" method="post" action="{{route('push.selected.orders')}}" >
+        @sessionToken
+        <input type="hidden" id="order_ids" name="order_ids" value="">
+    </form>
+
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
 
         $(document).ready(function (){
+
+            $('.export_button').click(function(){
+                $('#export_form').submit();
+            });
+
             setTimeout(function() { $(".alert-success").hide(); }, 2000);
             setTimeout(function() { $(".error-alert").hide(); }, 2000);
             $('.js-example').select2();
-            $('.product_detail').click(function (){
 
-                var row=$(this).data('row_id');
-                $(row).toggle();
-
-            });
             $('select[name=date]').on('change',function(){
                 if($(this).val()=='custom')
                 {
@@ -230,36 +238,53 @@
                 }
             });
 
-            $(".items").mouseover(function(){
-
-                $(this).parents('.main_popup').find(".pop_up").css("display", "block");
-            });
-            $(".pop_up").mouseout(function(){
-                $(this).parents('.main_popup').find(".pop_up").css("display", "none");
-            });
 
             $('body').on('click','.single_check',function(){
 
 
                 if($('.single_check:checked').length >0){
 
-                    $('.export_btn').show();
+                    $('.export_button').show();
                 }
-
+                else{
+                    $('.export_button').hide();
+                }
                 var val = [];
                 $('.single_check:checked').each(function(i){
                     val[i] = $(this).val();
                 });
 
 
-                var export_id= val.join(',');
-                $('#export_id').val(export_id);
+                var order_ids= val.join(',');
+                $('#order_ids').val(order_ids);
 
             });
 
 
+
             $('body').on('click','.submit_loader',function (){
                 $('body').append('<div class="LockOn"> </div>');
+            });
+
+
+            $("#checkAll").change(function(){
+
+                if($('#checkAll').prop('checked')) {
+                    $('.single_check').prop('checked', true)
+                    $('.export_button').show();
+                    var val = [];
+                    $('.single_check:checked').each(function(i){
+                        val[i] = $(this).val();
+                    });
+
+                    var order_ids= val.join(',');
+                    $('#order_ids').val(order_ids);
+
+                }else {
+                    $('.single_check').prop('checked', false);
+                    $('.export_button').hide();
+                    $('#order_ids').val('');
+                }
             });
         })
     </script>

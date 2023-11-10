@@ -20,6 +20,7 @@ Route::group(['middleware' => ['verify.shopify']], function () {
     Route::get('sync-order', [App\Http\Controllers\OrderController::class, 'shopifyOrders'])->name('sync.orders');
     Route::get('send-order-delivery/{id}', [App\Http\Controllers\OrderController::class, 'SendOrderDelivery'])->name('send.order.delivery');
     Route::post('orders-filter', [App\Http\Controllers\OrderController::class, 'OrdersFilter'])->name('orders.filter');
+    Route::post('push-selected-orders', [App\Http\Controllers\OrderController::class, 'PushSelectedOrders'])->name('push.selected.orders');
 
 
     Route::get('settings', [App\Http\Controllers\SettingController::class, 'Settings'])->name('settings');
