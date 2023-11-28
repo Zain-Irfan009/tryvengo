@@ -86,14 +86,24 @@
             <div class="col-md-9">
 
                 <div class="form-group">
-                    <form action="{{route('orders.filter')}}" method="Post">
+                    <form action="{{route('orders.filter')}}" method="get">
                         @sessionToken
                         <div class="input-group">
 
                             <select class="form-control " name="tryvengo_status">
                                 <option value="">Select Tryvengo Status</option>
                                 <option @if(isset($request) && $request->input('tryvengo_status')=='Pending') selected @endif value="Pending">Pending</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Confirm') selected @endif value="Confirm">Confirm</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Pick up in Progress') selected @endif value="Pick up in Progress">Pick up in Progress</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Reached Pickup Location') selected @endif value="Reached Pickup Location">Reached Pickup Location</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Picked') selected @endif value="Picked">Picked</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Out For Delivery') selected @endif value="Out For Delivery">Out For Delivery</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Reached Delivery Location') selected @endif value="Reached Delivery Location">Reached Delivery Location</option>
                                 <option @if(isset($request) && $request->input('tryvengo_status')=='Delivered') selected @endif value="Delivered">Delivered</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Cancel') selected @endif value="Cancel">Cancel</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Rescheduled') selected @endif value="Rescheduled">Rescheduled</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Reject') selected @endif value="Reject">Reject</option>
+                                <option @if(isset($request) && $request->input('tryvengo_status')=='Return') selected @endif value="Return">Return</option>
 
                             </select>
 
@@ -101,8 +111,8 @@
 
                             <select class="form-control " name="order_status">
                                 <option value="">Select Order Status</option>
-                                <option @if(isset($request) && $request->input('order_status')==0) selected @endif value="0">Not Pushed</option>
-                                <option @if(isset($request) && $request->input('order_status')==1) selected @endif value="1">Pushed</option>
+                                <option @if(isset($request) && $request->input('order_status')=="0") selected @endif value="0">Not Pushed</option>
+                                <option @if(isset($request) && $request->input('order_status')=="1") selected @endif value="1">Pushed</option>
                             </select>
 
                             <input placeholder="Enter Order Number,Customer Name" type="text" @if (isset($request)) value="{{$request->orders_filter}}" @endif name="orders_filter" id="question_email" autocomplete="off" class="form-control">

@@ -132,15 +132,22 @@ class OrderController extends Controller
                     if($setting->switch_account==0){
                         $email=$setting->email;
                         $password=$setting->password;
+                        $pick_up_address_id=37;
                     }elseif ($setting->switch_account==1){
                         $email=$setting->email2;
                         $password=$setting->password2;
+                        $pick_up_address_id=39;
                     }
+
+                    $order_number='Shopify_'.$order->order_number;
+                    $order_number = preg_replace("/[^a-zA-Z0-9]/", "", $order_number);
+
                     $data = [
                         'email' =>$email,
                         'password' =>$password,
-                        'pick_up_address_id' => 37,
+                        'pick_up_address_id' =>$pick_up_address_id,
                         'item_type' => 'ds',
+                        'invoice_id'=>$order_number,
                         'item_price' => $newOrder->total_price,
                         'payment_mode' => $payment_mode,
                         'pickup_estimate_time_type' => 0,
@@ -419,6 +426,9 @@ class OrderController extends Controller
 
     public function SendOrderDelivery($id)
     {
+
+
+
         $shop = Auth::user();
         $order = Order::find($id);
         $setting=Setting::first();
@@ -426,6 +436,7 @@ class OrderController extends Controller
 
 try {
     $url = 'https://tryvengo.com/api/place-ecomerce-order';
+
     $pickupEstimateTime = now()->addHours(2);
 //            dd($pickupEstimateTime->format('d/m/Y h:i A'));
 
@@ -441,16 +452,22 @@ if($order->financial_status=='paid'){
 if($setting->switch_account==0){
     $email=$setting->email;
     $password=$setting->password;
+    $pick_up_address_id=37;
 }elseif ($setting->switch_account==1){
     $email=$setting->email2;
     $password=$setting->password2;
+    $pick_up_address_id=39;
 }
+
+$order_number='Shopify_'.$order->order_number;
+    $order_number = preg_replace("/[^a-zA-Z0-9]/", "", $order_number);
 
     $data = [
         'email' => $email,
         'password' => $password,
-        'pick_up_address_id' => 37,
+        'pick_up_address_id' =>$pick_up_address_id,
         'item_type' => 'ds',
+        'invoice_id'=>$order_number,
         'item_price' => $order->total_price,
         'payment_mode' => $payment_mode,
         'pickup_estimate_time_type' => 0,
@@ -526,6 +543,7 @@ if($setting->switch_account==0){
             $orders = $orders->where('tryvengo_status', $request->tryvengo_status );
         }
 
+
         if($request->order_status!=null) {
             $orders = $orders->where('status', $request->order_status );
         }
@@ -534,7 +552,8 @@ if($setting->switch_account==0){
             $orders = $orders->whereDate('created_at', $request->date_filter);
         }
 //        $orders=$orders->where('shop_id',$shop->id)->orderBy('id', 'DESC')->paginate(20);
-        $orders=$orders->where('shop_id',$shop->id)->orderBy('id', 'DESC')->paginate(30);
+
+        $orders=$orders->orderBy('id', 'DESC')->paginate(30);
         return view('orders.index',compact('orders','request','shop','orders_count'));
     }
 
@@ -577,7 +596,7 @@ if($setting->switch_account==0){
 
         // Decode the JSON response
         $responseData = json_decode($response, true);
-        dd($responseData);
+
         if($responseData['status']==1){
 
 //           $order->tryvengo_status=$responseData['order_data']['order_status'];
@@ -619,16 +638,20 @@ if($setting->switch_account==0){
                 if($setting->switch_account==0){
                     $email=$setting->email;
                     $password=$setting->password;
+                    $pick_up_address_id=37;
                 }elseif ($setting->switch_account==1){
                     $email=$setting->email2;
                     $password=$setting->password2;
+                    $pick_up_address_id=39;
                 }
-
+                $order_number='Shopify_'.$order->order_number;
+                $order_number = preg_replace("/[^a-zA-Z0-9]/", "", $order_number);
                 $data = [
                     'email' => $email,
                     'password' => $password,
-                    'pick_up_address_id' => 37,
+                    'pick_up_address_id' => $pick_up_address_id,
                     'item_type' => 'ds',
+                    'invoice_id'=>$order_number,
                     'item_price' => $order->total_price,
                     'payment_mode' => $payment_mode,
                     'pickup_estimate_time_type' => 0,

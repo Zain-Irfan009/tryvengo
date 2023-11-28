@@ -31,15 +31,24 @@ class TrackOrderCron extends Command
     {
 
         $setting=Setting::first();
-        $orders=Order::where('tryvengo_status','!=','Delivered')->get();
+        $orders=Order::where('status',1)->where('tryvengo_status','!=','Delivered')->orderBy('id','desc')->get();
 
         $url = 'https://tryvengo.com/api/track-order';
         foreach ($orders as $order){
 
+            if($setting->switch_account==0){
+                $email=$setting->email;
+                $password=$setting->password;
+
+            }elseif ($setting->switch_account==1){
+                $email=$setting->email2;
+                $password=$setting->password2;
+
+            }
 
             $data = [
-                'email' =>'orders@mubkhar.com',
-                'password' => 'Mubkv9Qh@1',
+                'email' =>$email,
+                'password' => $password,
                 'invoice_id'=>$order->invoice_id,
             ];
 
@@ -71,7 +80,8 @@ class TrackOrderCron extends Command
 
             // Decode the JSON response
             $responseData = json_decode($response, true);
-            if($responseData['status']==1){
+
+            if($responseData && $responseData['status']==1){
                 $order->tryvengo_status=$responseData['order_data']['order_status'];
                 $order->save();
             }
