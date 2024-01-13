@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('trackorder:cron')->hourly();
+        $schedule->command('trackorder2:cron')->hourly();
     }
 
     /**

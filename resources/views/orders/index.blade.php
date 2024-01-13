@@ -74,6 +74,38 @@
         </div>
     @endif
 
+    <div class="page-header d-print-none">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <h1 class="page-title">
+                    Summary
+                </h1>
+
+            </div>
+        </div>
+
+
+
+        <div class="row mt-3">
+            <div class="col-6">
+                <strong>Total Orders: </strong>{{$total_orders}}
+            </div>
+
+            <div class="col-6">
+                <strong>Orders Pending: </strong> {{$pending_orders}}
+            </div>
+
+            <div class="col-6">
+                <strong>Orders Pushed: </strong> {{$pushed_orders}}
+            </div>
+
+            <div class="col-6">
+               <strong>Orders Delivered: </strong> {{$delivered_orders}}
+            </div>
+        </div>
+    </div>
+
+
 
     <div class="page-header d-print-none">
         <div class="row g-2 align-items-center">

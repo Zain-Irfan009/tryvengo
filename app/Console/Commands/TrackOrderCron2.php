@@ -8,14 +8,14 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Console\Command;
 
-class TrackOrderCron extends Command
+class TrackOrderCron2 extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'trackorder:cron';
+    protected $signature = 'trackorder2:cron';
 
     /**
      * The console command description.
@@ -39,8 +39,9 @@ class TrackOrderCron extends Command
         $url = 'https://tryvengo.com/api/track-order';
         foreach ($orders as $order){
 
-            $email=$setting->email;
-            $password=$setting->password;
+            $email=$setting->email2;
+            $password=$setting->password2;
+
 
 //            if($setting->switch_account==0){
 //                $email=$setting->email;
@@ -182,7 +183,6 @@ class TrackOrderCron extends Command
                         'order'=>[
                         ]
                     ]);
-
                 }
 
             }

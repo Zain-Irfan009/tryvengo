@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lineitem;
 use App\Models\Order;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -14,8 +15,13 @@ class OrderController extends Controller
 
     public function allOrders(){
 
+        $total_orders=Order::count();
+        $pushed_orders=Order::where('status',1)->count();
+        $pending_orders=Order::where('tryvengo_status','Pending')->count();
+        $delivered_orders=Order::where('tryvengo_status','Delivered')->count();
+
         $orders=Order::orderBy('order_number','desc')->paginate(30);
-        return view('orders.index',compact('orders'));
+        return view('orders.index',compact('orders','total_orders','pushed_orders','pending_orders','delivered_orders'));
     }
 
 
@@ -117,6 +123,7 @@ class OrderController extends Controller
                     $new_line->save();
                 }
                 $setting=Setting::first();
+                $this->fulfillmentOrders($newOrder);
                 if($setting->auto_push_orders==1){
                     $url = 'https://tryvengo.com/api/place-ecomerce-order';
                     $pickupEstimateTime = now()->addHours(4);
@@ -276,6 +283,8 @@ class OrderController extends Controller
                     $new_line->shopify_order_id = $order->id;
                     $new_line->save();
                 }
+
+                $this->fulfillmentOrders($newOrder);
                 $setting = Setting::first();
                 if ($setting->auto_push_orders == 1) {
                     $url = 'https://tryvengo.com/api/place-ecomerce-order';
@@ -339,6 +348,7 @@ class OrderController extends Controller
                     }
                 }
             }
+
 
 
 
@@ -420,6 +430,8 @@ class OrderController extends Controller
 
 
             }
+
+            $this->fulfillmentOrders($newOrder);
         }
     }
 
@@ -532,9 +544,10 @@ $order_number='Shopify_'.$order->order_number;
 
     public function OrdersFilter(Request $request){
 
+
         $shop=Auth::user();
         $orders=Order::query();
-        $orders_count=Order::where('shop_id',$shop->id)->count();
+
         if($request->orders_filter!=null) {
             $orders = $orders->where('order_number', 'like', '%' . $request->orders_filter . '%')->orWhere('shipping_name', 'like', '%' . $request->orders_filter . '%');
         }
@@ -543,7 +556,6 @@ $order_number='Shopify_'.$order->order_number;
             $orders = $orders->where('tryvengo_status', $request->tryvengo_status );
         }
 
-
         if($request->order_status!=null) {
             $orders = $orders->where('status', $request->order_status );
         }
@@ -551,10 +563,22 @@ $order_number='Shopify_'.$order->order_number;
         if ($request->date_filter != null) {
             $orders = $orders->whereDate('created_at', $request->date_filter);
         }
-//        $orders=$orders->where('shop_id',$shop->id)->orderBy('id', 'DESC')->paginate(20);
+
+
+        $order_ids=$orders->pluck('id')->toArray();
+
+
+
+        $total_orders=Order::whereIn('id',$order_ids)->where('shop_id',$shop->id)->count();
+        $pushed_orders=Order::whereIn('id',$order_ids)->where('status',1)->count();
+        $pending_orders=Order::whereIn('id',$order_ids)->where('tryvengo_status','Pending')->count();
+        $delivered_orders=Order::whereIn('id',$order_ids)->where('tryvengo_status','Delivered')->count();
+
+
 
         $orders=$orders->orderBy('id', 'DESC')->paginate(30);
-        return view('orders.index',compact('orders','request','shop','orders_count'));
+
+        return view('orders.index',compact('orders','request','shop','total_orders','pushed_orders','pending_orders','delivered_orders'));
     }
 
 
@@ -710,5 +734,29 @@ $order_number='Shopify_'.$order->order_number;
             }
         }
 
+    }
+
+
+    public function fulfillmentOrders($order){
+        $shop = User::where('name', env('SHOP_NAME'))->first();
+        $get_fulfillment_orders= $shop->api()->rest('get', '/admin/api/2023-01/orders/' . $order->shopify_id . '/fulfillment_orders.json');
+
+        if ($get_fulfillment_orders['errors'] == false) {
+            $get_fulfillment_orders = json_decode(json_encode($get_fulfillment_orders));
+            foreach ($get_fulfillment_orders->body->fulfillment_orders as $fulfillment) {
+                $order->shopify_fulfillment_order_id = $fulfillment->id;
+                $order->save();
+
+                foreach ($fulfillment->line_items as $line_item) {
+                    $db_line_item = LineItem::where('shopify_id', $line_item->line_item_id)->first();
+                    if (isset($db_line_item)) {
+                        $db_line_item->shopify_fulfillment_order_id = $line_item->id;
+                        $db_line_item->shopify_fulfillment_real_order_id = $line_item->fulfillment_order_id;
+                        $db_line_item->assigned_location_id = $fulfillment->assigned_location_id;
+                        $db_line_item->save();
+                    }
+                }
+            }
+        }
     }
 }
