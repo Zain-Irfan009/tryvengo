@@ -94,6 +94,17 @@ class TrackOrderCron2 extends Command
                 $order->tryvengo_status=$responseData['order_data']['order_status'];
                 $order->save();
 
+                $check_order=$shop->api()->rest('get', '/admin/orders/' . $order->shopify_id . '.json');
+                $check_order=json_decode(json_encode($check_order['body']['container']['order']));
+                $tags=$check_order->tags;
+                $tags_to_remove = array('Pending', 'Confirm', 'Pick up in Progress', 'Reached Pickup Location', 'Picked', 'Out For Delivery', 'Reached Delivery Location', 'Delivered', 'Cancel', 'Rescheduled', 'Reject', 'Return');
+                $tags = str_replace($tags_to_remove, '', $tags);
+                $tags = trim($tags);
+                $get = $shop->api()->rest('put', '/admin/orders/'.$order->shopify_id.'json', [
+                    "order" => [
+                        "tags" => $tags.','. $order->tryvengo_status,
+                    ]
+                ]);
                 if($order->tryvengo_status=='Picked'){
 
 //                    $scheduled_fulfillment = [

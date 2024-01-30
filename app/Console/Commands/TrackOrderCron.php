@@ -34,7 +34,7 @@ class TrackOrderCron extends Command
         $shop = User::where('name', env('SHOP_NAME'))->first();
         $setting=Setting::first();
         $orders=Order::where('status',1)->where('tryvengo_status','!=','Delivered')->orderBy('id','desc')->get();
-//        $orders=Order::where('id',6657)->get();
+//        $orders=Order::where('id',8851)->get();
 
         $url = 'https://tryvengo.com/api/track-order';
         foreach ($orders as $order){
@@ -92,6 +92,18 @@ class TrackOrderCron extends Command
 
                 $order->tryvengo_status=$responseData['order_data']['order_status'];
                 $order->save();
+
+                $check_order=$shop->api()->rest('get', '/admin/orders/' . $order->shopify_id . '.json');
+                $check_order=json_decode(json_encode($check_order['body']['container']['order']));
+                $tags=$check_order->tags;
+                $tags_to_remove = array('Pending', 'Confirm', 'Pick up in Progress', 'Reached Pickup Location', 'Picked', 'Out For Delivery', 'Reached Delivery Location', 'Delivered', 'Cancel', 'Rescheduled', 'Reject', 'Return');
+                $tags = str_replace($tags_to_remove, '', $tags);
+                $tags = trim($tags);
+                $get = $shop->api()->rest('put', '/admin/orders/'.$order->shopify_id.'json', [
+                    "order" => [
+                        "tags" => $tags.','. $order->tryvengo_status,
+                    ]
+                ]);
 
                 if($order->tryvengo_status=='Picked'){
 
